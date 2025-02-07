@@ -33,8 +33,8 @@ function addGa(html) {
             "  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);",
             "})();",
             "</script>"
-            ].join("\n");
-        html = html.replace("</body>", ga + "\n\n</body>");
+            ].join("\\n");
+        html = html.replace("</body>", ga + "\\n\\n</body>");
     }
     return html;
 }
@@ -53,13 +53,31 @@ function googleAnalyticsMiddleware(data) {
     }
 }
 
+function cloakingMiddleware(data) {
+  if (data.contentType == 'text/html') {
+    data.stream = data.stream.pipe(new Transform({
+      decodeStrings: false,
+      transform: function(chunk, encoding, next) {
+        let html = chunk.toString();
+        // Change page title to 'Google Drive'
+        html = html.replace(/<title>.*?<\/title>/i, '<title>Google Drive</title>');
+        // Add Google Drive favicon
+        html = html.replace('</head>', '<link rel="icon" type="image/x-icon" href="https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png"></head>');
+        this.push(html);
+        next();
+      }
+    }));
+  }
+}
+
 var unblockerConfig = {
     prefix: '/proxy/',
     requestMiddleware: [
         youtube.processRequest
     ],
     responseMiddleware: [
-        googleAnalyticsMiddleware
+        googleAnalyticsMiddleware,
+        cloakingMiddleware
     ]
 };
 
